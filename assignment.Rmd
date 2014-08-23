@@ -171,10 +171,10 @@ base.tree <- train(classe ~ .,
                    method="rpart") 
 ```
 
-The model's performance on the validation set is quite poor. However,
-it is still a large improvement compared to the benchmark (we correctly
-specified the classe in 40% of the cases whereas there are 5 classes with close
-to equal prevalence).
+The model's performance on the validation set is quite poor. However, it is
+still a large improvement compared to the benchmark (we correctly specified
+the classe in 42 percent of the cases whereas there are 5 classes with
+close to equal prevalence).
 
 ```{r base tree performance}
 # performance on validation set
@@ -194,7 +194,12 @@ mean(predict(base.forest, validation) == validation$classe)
 ```
 
 If I run the same model (random forest) on all of my (cleaned) data, I get
-a further improvement in accuracy reaching 99% on the validation set. 
+a further improvement in accuracy reaching 99% on the validation set. From the
+confusion matrix we can also tell that the best (balanced) accuracy is reached
+for the classe "A" which denotes the correctly executed exercise. As I suspect
+that to differentiate between correct and incorrect exercise is more important
+than to differentiate between different types of incorrect ones, this is good
+news.
 
 ```{r nonmissing forest all}
 # All non-missing, random forest, all
@@ -202,7 +207,8 @@ nonmiss.forest.all <- train(classe ~ .,
                             data=all.nonmiss$training,
                             method="rf")
 # performance on validation set
-mean(predict(nonmiss.forest.all, validation) == validation$classe)
+confusionMatrix(predict(nonmiss.forest.all, validation),
+                validation$classe)
 ```
 
 In the following, I build two additional models: (1) a random forest which uses
@@ -230,17 +236,19 @@ nonmiss.boost <- train(classe ~ .,
 mean(predict(nonmiss.boost, validation) == validation$classe)
 ```
 
-We can see that the models which use all of the variables perform better than
-the preprocessed one even on the validation set. As ensembling different models
-together always promises some accuracy gain (if there is at least some
-indepence between the models), I stack together the last three models by using
-the random forest method on the predictions. Not surprisingly, this model
-reaches the highest accuracy on the validation set amounting to  percent.
-
+We can see that the random forest models perform better than the boosted one,
+and that the one which use all of the variables perform better than the
+preprocessed one (measured on the validation set). The random forest without
+principal component preprocessing reaches an accuracy of 99 percent. The other
+two models are slightly worse, but still very good: they predict the classe
+correctly in 96-97 percent of the cases. As ensembling different models
+together usually promises some accuracy gain (if there is at least some
+indepence between the models) I stack together the last three models by using
+the random forest method on the predictions. 
 
 ```{r stack together}
 df.predicted <- data.frame(
-    pred.forest=predict(nonmiss.forest, all.nonmiss$training),
+    pred.forest=predict(nonmiss.forest.pca, all.nonmiss$training),
     pred.forest.pca=predict(nonmiss.forest.all, all.nonmiss$training),
     pred.boost=predict(nonmiss.boost, all.nonmiss$training),
     classe=all.nonmiss$training$classe
@@ -255,17 +263,28 @@ df.predicted.validation <- data.frame(
     pred.boost=predict(nonmiss.boost, all.nonmiss$validation),
     classe=all.nonmiss$validation$classe
 )
-confusionMatrix(predict(stacked, df.predicted.validation),
-                validation$classe)
+mean(predict(stacked, df.predicted.validation) == validation$classe)
 ```
+
+The performance of the stacked model is an accuracy of about 98 percent. The
+fact that it is slightly below the bigger random forest model might be due to
+the similarity of the models which were stacked together and to the already
+really high accuracy of one of the models. I think that 99 percent accuracy on
+the validation set is quite good so I choose the random forest model without
+prepocessing to be my final model. Its performance of a completely new data
+(like on the test set) might be slightly worse, but since I did not really do
+any fine-tuning based on the validation set results I do not expect this drop
+to matter.
+
 
 Conclusion
 ----------
 
 This simple exercise showed us that applying some machine learning techniques
 which are basic today and easy to implement in R could result in a highly
-precise predictive model. As the last step I use my best model (the stacked
-one) to predict the test cases.
+precise predictive model. As the last step I use my best model (the random
+forest model without preprocessing) to predict the test cases. It yielded a 100
+percent accuracy.
 
 ```{r prediction on testing}
 testing <- read.csv("../data/pml-testing.csv")
@@ -273,14 +292,6 @@ testing <- read.csv("../data/pml-testing.csv")
 testing[, factors] <- lapply(all.data$validation[factors], ToNum)
 testing <- select(testing, -(1:7))
 testing <- select(testing, index.nonmissing.feat)
-testing[gyros_variables] <- log(testing[gyros_variables] + 500)
-df.predicted.test <- data.frame(
-    pred.forest=predict(nonmiss.forest.pca, testing),
-    pred.forest.pca=predict(nonmiss.forest.all, testing),
-    pred.boost=predict(nonmiss.boost, testing),
-)
-as.data.frame(predict(stacked, df.predicted.testing))
+answers <- predict(nonmiss.forest.all, testing)
 ```
- 
- 
  
