@@ -3,7 +3,7 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 
-<title>Prediction of activities based on measurements of accelerometers</title>
+<title>Prediction of execution of an exercise based on measurements of accelerometers</title>
 
 <!-- Styles for R syntax highlighter -->
 <style type="text/css">
@@ -187,7 +187,7 @@ hr {
 </head>
 
 <body>
-<h1>Prediction of activities based on measurements of accelerometers</h1>
+<h1>Prediction of execution of an exercise based on measurements of accelerometers</h1>
 
 <h2>Introduction</h2>
 
@@ -204,8 +204,6 @@ forearm, belt, dumbbell) were active to measure the activity. For this project
 I can use the predictors derived from these measurements (for further details
 see the 
 <a href="http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201">original paper</a>).</p>
-
-<p>About the results.</p>
 
 <p>The project was carried out in R (with a little help of a nice tool of
 <a href="https://github.com/setosa/csv-fingerprint">csv-fingerprint</a>). In order to
@@ -361,10 +359,10 @@ base.tree &lt;- train(classe ~ .,
                    method=&quot;rpart&quot;) 
 </code></pre>
 
-<p>The model&#39;s performance on the validation set is quite poor. However,
-it is still a large improvement compared to the benchmark (we correctly
-specified the classe in 40% of the cases whereas there are 5 classes with close
-to equal prevalence).</p>
+<p>The model&#39;s performance on the validation set is quite poor. However, it is
+still a large improvement compared to the benchmark (we correctly specified
+the classe in 42 percent of the cases whereas there are 5 classes with
+close to equal prevalence).</p>
 
 <pre><code class="r"># performance on validation set
 mean(predict(base.tree, validation) == validation$classe)
@@ -375,59 +373,85 @@ mean(predict(base.tree, validation) == validation$classe)
 
 <p>For the next step I choose to build a more complicated model on the same set of
 variables, a random forest. This results in a huge improvement, it is able to
-predict more than 90% of the cases correctly.</p>
+predict more than 93% of the cases correctly.</p>
 
-<h3>&ldquo;{r base forest}</h3>
+<pre><code class="r">base.forest &lt;- train(classe ~ .,
+                     data=base.data,
+                     method=&quot;rf&quot;) 
+# performance on validation set
+mean(predict(base.forest, validation) == validation$classe)
+</code></pre>
 
-<h3>base.forest &lt;- train(classe ~ .,</h3>
+<pre><code>## [1] 0.9318
+</code></pre>
 
-<h3>data=base.data,</h3>
+<p>If I run the same model (random forest) on all of my (cleaned) data, I get
+a further improvement in accuracy reaching 99% on the validation set. From the
+confusion matrix we can also tell that the best (balanced) accuracy is reached
+for the classe &ldquo;A&rdquo; which denotes the correctly executed exercise. As I suspect
+that to differentiate between correct and incorrect exercise is more important
+than to differentiate between different types of incorrect ones, this is good
+news.</p>
 
-<h3>method=&quot;rf&rdquo;)</h3>
+<pre><code class="r"># All non-missing, random forest, all
+nonmiss.forest.all &lt;- train(classe ~ .,
+                            data=all.nonmiss$training,
+                            method=&quot;rf&quot;)
+# performance on validation set
+confusionMatrix(predict(nonmiss.forest.all, validation),
+                validation$classe)
+</code></pre>
 
-<h3># performance on validation set</h3>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 2230    9    0    0    0
+##          B    1 1506    7    1    1
+##          C    0    2 1356   19    1
+##          D    0    1    5 1265    2
+##          E    1    0    0    1 1438
+## 
+## Overall Statistics
+##                                         
+##                Accuracy : 0.993         
+##                  95% CI : (0.991, 0.995)
+##     No Information Rate : 0.284         
+##     P-Value [Acc &gt; NIR] : &lt;2e-16        
+##                                         
+##                   Kappa : 0.992         
+##  Mcnemar&#39;s Test P-Value : NA            
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity             0.999    0.992    0.991    0.984    0.997
+## Specificity             0.998    0.998    0.997    0.999    1.000
+## Pos Pred Value          0.996    0.993    0.984    0.994    0.999
+## Neg Pred Value          1.000    0.998    0.998    0.997    0.999
+## Prevalence              0.284    0.193    0.174    0.164    0.184
+## Detection Rate          0.284    0.192    0.173    0.161    0.183
+## Detection Prevalence    0.285    0.193    0.176    0.162    0.184
+## Balanced Accuracy       0.999    0.995    0.994    0.991    0.998
+</code></pre>
 
-<h3>mean(predict(base.forest, validation) == validation$classe)</h3>
+<p>In the following, I build two additional models: (1) a random forest which uses
+only the principal components of the variables which explain 90 percent of the
+total variance and (2) and a generalized boosted model using the <code>gbm</code> method
+of the <code>caret</code> package.</p>
 
-<h3>&ldquo;</h3>
+<pre><code class="r"># All non-missing, random forest, pca 90%
+nonmiss.forest.pca &lt;- train(classe ~ .,
+                            data=all.nonmiss$training,
+                            method=&quot;rf&quot;,
+                            preProcess=&quot;pca&quot;,
+                            trControl=trainControl(preProcOptions=(thresh=0.9)))
+# performance on validation set
+mean(predict(nonmiss.forest.pca, validation) == validation$classe)
+</code></pre>
 
-<h3>Try complicated model on all of the data</h3>
-
-<h3>&rdquo;{r nonmissing forest all}</h3>
-
-<h3># All non-missing, random forest, all</h3>
-
-<h3>nonmiss.forest.all &lt;- train(classe ~ .,</h3>
-
-<h3>data=all.nonmiss$training,</h3>
-
-<h3>method=&ldquo;rf&rdquo;)</h3>
-
-<h3># performance on validation set</h3>
-
-<h3>mean(predict(nonmiss.forest.all, validation) == validation$classe)</h3>
-
-<h3>&ldquo;</h3>
-
-<h3>&rdquo;{r nonmissing forest 90pca}</h3>
-
-<h3># All non-missing, random forest, pca 90%</h3>
-
-<h3>nonmiss.forest.pca &lt;- train(classe ~ .,</h3>
-
-<h3>data=all.nonmiss$training,</h3>
-
-<h3>method=&ldquo;rf&rdquo;,</h3>
-
-<h3>preProcess=&ldquo;pca&rdquo;,</h3>
-
-<h3>trControl=trainControl(preProcOptions=(thresh=0.9)))</h3>
-
-<h3># performance on validation set</h3>
-
-<h3>mean(predict(nonmiss.forest.pca, validation) == validation$classe)</h3>
-
-<h3>&ldquo;</h3>
+<pre><code>## [1] 0.9716
+</code></pre>
 
 <pre><code class="r"># All non-missing, boosting 
 nonmiss.boost &lt;- train(classe ~ .,
@@ -436,112 +460,90 @@ nonmiss.boost &lt;- train(classe ~ .,
 </code></pre>
 
 <pre><code>## Iter   TrainDeviance   ValidDeviance   StepSize   Improve
-##      1        1.6094            -nan     0.1000    0.2318
-##      2        1.4620            -nan     0.1000    0.1614
-##      3        1.3585            -nan     0.1000    0.1209
-##      4        1.2814            -nan     0.1000    0.1181
-##      5        1.2088            -nan     0.1000    0.0796
-##      6        1.1577            -nan     0.1000    0.0736
-##      7        1.1108            -nan     0.1000    0.0598
-##      8        1.0729            -nan     0.1000    0.0696
-##      9        1.0300            -nan     0.1000    0.0637
-##     10        0.9897            -nan     0.1000    0.0568
-##     20        0.7538            -nan     0.1000    0.0258
-##     40        0.5263            -nan     0.1000    0.0096
-##     60        0.4049            -nan     0.1000    0.0063
-##     80        0.3240            -nan     0.1000    0.0058
-##    100        0.2650            -nan     0.1000    0.0020
-##    120        0.2217            -nan     0.1000    0.0022
-##    140        0.1893            -nan     0.1000    0.0016
-##    150        0.1746            -nan     0.1000    0.0016
+##      1        1.6094            -nan     0.1000    0.2310
+##      2        1.4614            -nan     0.1000    0.1670
+##      3        1.3573            -nan     0.1000    0.1212
+##      4        1.2802            -nan     0.1000    0.1060
+##      5        1.2148            -nan     0.1000    0.0923
+##      6        1.1565            -nan     0.1000    0.0839
+##      7        1.1036            -nan     0.1000    0.0626
+##      8        1.0628            -nan     0.1000    0.0618
+##      9        1.0235            -nan     0.1000    0.0617
+##     10        0.9839            -nan     0.1000    0.0490
+##     20        0.7570            -nan     0.1000    0.0275
+##     40        0.5341            -nan     0.1000    0.0169
+##     60        0.4055            -nan     0.1000    0.0064
+##     80        0.3278            -nan     0.1000    0.0041
+##    100        0.2676            -nan     0.1000    0.0032
+##    120        0.2252            -nan     0.1000    0.0019
+##    140        0.1909            -nan     0.1000    0.0018
+##    150        0.1781            -nan     0.1000    0.0016
 </code></pre>
 
 <pre><code class="r"># performance on validation set
 mean(predict(nonmiss.boost, validation) == validation$classe)
 </code></pre>
 
-<pre><code>## [1] 0.962
+<pre><code>## [1] 0.9637
 </code></pre>
 
-<h3>&rdquo;{r stack together}</h3>
+<p>We can see that the random forest models perform better than the boosted one,
+and that the one which use all of the variables perform better than the
+preprocessed one (measured on the validation set). The random forest without
+principal component preprocessing reaches an accuracy of 99 percent. The other
+two models are slightly worse, but still very good: they predict the classe
+correctly in 96-97 percent of the cases. As ensembling different models
+together usually promises some accuracy gain (if there is at least some
+indepence between the models) I stack together the last three models by using
+the random forest method on the predictions. </p>
 
-<h3>df.predicted &lt;- data.frame(</h3>
+<pre><code class="r">df.predicted &lt;- data.frame(
+    pred.forest=predict(nonmiss.forest.pca, all.nonmiss$training),
+    pred.forest.pca=predict(nonmiss.forest.all, all.nonmiss$training),
+    pred.boost=predict(nonmiss.boost, all.nonmiss$training),
+    classe=all.nonmiss$training$classe
+)
+stacked &lt;- train(classe ~ .,
+                 data=df.predicted,
+                 method=&quot;rf&quot;)
+# performance on validation set
+df.predicted.validation &lt;- data.frame(
+    pred.forest=predict(nonmiss.forest.pca, all.nonmiss$validation),
+    pred.forest.pca=predict(nonmiss.forest.all, all.nonmiss$validation),
+    pred.boost=predict(nonmiss.boost, all.nonmiss$validation),
+    classe=all.nonmiss$validation$classe
+)
+mean(predict(stacked, df.predicted.validation) == validation$classe)
+</code></pre>
 
-<h3>pred.forest=predict(nonmiss.forest, all.nonmiss$training),</h3>
+<pre><code>## [1] 0.9879
+</code></pre>
 
-<h3>pred.forest.pca=predict(nonmiss.forest.all, all.nonmiss$training),</h3>
+<p>The performance of the stacked model is an accuracy of about 98 percent. The
+fact that it is slightly below the bigger random forest model might be due to
+the similarity of the models which were stacked together and to the already
+really high accuracy of one of the models. I think that 99 percent accuracy on
+the validation set is quite good so I choose the random forest model without
+prepocessing to be my final model. Its performance of a completely new data
+(like on the test set) might be slightly worse, but since I did not really do
+any fine-tuning based on the validation set results I do not expect this drop
+to matter.</p>
 
-<h3>pred.boost=predict(nonmiss.boost, all.nonmiss$training),</h3>
+<h2>Conclusion</h2>
 
-<h3>classe=all.nonmiss$training$classe</h3>
+<p>This simple exercise showed us that applying some machine learning techniques
+which are basic today and easy to implement in R could result in a highly
+precise predictive model. As the last step I use my best model (the random
+forest model without preprocessing) to predict the test cases. It yielded a 100
+percent accuracy.</p>
 
-<h3>)</h3>
-
-<h3>stacked &lt;- train(classe ~ .,</h3>
-
-<h3>data=df.predicted,</h3>
-
-<h3>method=&ldquo;rf&rdquo;)</h3>
-
-<h3># performance on validation set</h3>
-
-<h3>df.predicted.validation &lt;- data.frame(</h3>
-
-<h3>pred.forest=predict(nonmiss.forest.pca, all.nonmiss$validation),</h3>
-
-<h3>pred.forest.pca=predict(nonmiss.forest.all, all.nonmiss$validation),</h3>
-
-<h3>pred.boost=predict(nonmiss.boost, all.nonmiss$validation),</h3>
-
-<h3>classe=all.nonmiss$validation$classe</h3>
-
-<h3>)</h3>
-
-<h3>confusionMatrix(predict(stacked, df.predicted.validation),</h3>
-
-<h3>validation$classe)</h3>
-
-<h3>&ldquo;</h3>
-
-<h3>Conclusion</h3>
-
-<h3>&mdash;&mdash;&mdash;-</h3>
-
-<h3>This simple exercise showed us that applying some machine learning techniques</h3>
-
-<h3>which are basic today and easy to implement in R could result in a highly</h3>
-
-<h3>precise predictive model. As the last step I use my best model to predict the</h3>
-
-<h3>test cases.</h3>
-
-<h3>&rdquo;{r prediction on testing}</h3>
-
-<h3>testing &lt;- read.csv(&ldquo;../data/pml-testing.csv&rdquo;)</h3>
-
-<h3># apply the same transformations as before</h3>
-
-<h3>testing[, factors] &lt;- lapply(all.data$validation[factors], ToNum)</h3>
-
-<h3>testing &lt;- select(testing, -(1:7))</h3>
-
-<h3>testing &lt;- select(testing, index.nonmissing.feat)</h3>
-
-<h3>testing[gyros_variables] &lt;- log(testing[gyros_variables] + 500)</h3>
-
-<h3>df.predicted.test &lt;- data.frame(</h3>
-
-<h3>pred.forest=predict(nonmiss.forest.pca, testing),</h3>
-
-<h3>pred.forest.pca=predict(nonmiss.forest.all, testing),</h3>
-
-<h3>pred.boost=predict(nonmiss.boost, testing),</h3>
-
-<h3>)</h3>
-
-<h3>as.data.frame(predict(stacked, df.predicted.testing))</h3>
-
-<h3>&ldquo;</h3>
+<pre><code class="r">testing &lt;- read.csv(&quot;../data/pml-testing.csv&quot;)
+# apply the same transformations as before
+testing[, factors] &lt;- lapply(all.data$validation[factors], ToNum)
+testing &lt;- select(testing, -(1:7))
+testing &lt;- select(testing, index.nonmissing.feat)
+answers &lt;- predict(nonmiss.forest.all, testing)
+</code></pre>
 
 </body>
 

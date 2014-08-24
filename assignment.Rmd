@@ -18,8 +18,6 @@ I can use the predictors derived from these measurements (for further details
 see the 
 [original paper](http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201)).
  
-About the results.
-
 The project was carried out in R (with a little help of a nice tool of
 [csv-fingerprint](https://github.com/setosa/csv-fingerprint)). In order to
 increase efficiency I use the `doMC` package for parallel computing. 
